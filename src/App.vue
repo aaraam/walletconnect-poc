@@ -1,52 +1,149 @@
-<script setup lang="ts">
+<script setup>
+import { ref, onMounted } from 'vue';
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/vue';
-import { ref, onMounted, watch } from 'vue';
 import { ethers } from 'ethers';
 
-// 1. Get projectId from https://cloud.walletconnect.com
+let connected = ref(false);
+
+// WalletConnect Project ID
 const projectId = '59b8f4b8f8153ff97e652204f24f0442';
 
-// 2. Set chains
+// Binance Smart Chain Configuration
 const mainnet = {
-	chainId: 1,
-	name: 'Ethereum',
-	currency: 'ETH',
-	explorerUrl: 'https://etherscan.io',
-	rpcUrl: 'https://cloudflare-eth.com',
+  chainId: 56,
+  name: 'Binance Smart Chain',
+  currency: 'BNB',
+  explorerUrl: 'https://bscscan.com',
+  rpcUrl: 'https://56.rpc.thirdweb.com/66c5a792422842671ed5c3047791f5b8',
 };
 
-// 3. Create your application's metadata object
+// Application Metadata
 const metadata = {
-	name: 'My Website',
-	description: 'My Website description',
-	url: 'https://mywebsite.com', // url must match your domain & subdomain
-	icons: ['https://avatars.mywebsite.com/'],
+  name: 'WalletConnect POC',
+  description: 'WalletConnect POC',
+  url: 'https://aaraam.is-a.dev/walletconnect-poc/',
+  icons: ['https://avatars.mywebsite.com/'],
 };
 
-// 4. Create Ethers config
-const ethersConfig = defaultConfig({
-	/*Required*/
-	metadata,
+// **Reactive Wallet Address**
+const walletAddress = ref(null);
+let modal = null; // Web3Modal instance (initialized in onMounted)
 
-	/*Optional*/
-	enableEIP6963: true, // true by default
-	enableInjected: true, // true by default
-	enableCoinbase: true, // true by default
-	rpcUrl: 'https://56.rpc.thirdweb.com/66c5a792422842671ed5c3047791f5b8', // used for the Coinbase SDK
-	defaultChainId: 1, // used for the Coinbase SDK
-});
+// Function to connect wallet properly
+const connectWallet = async () => {
+  try {
+    console.log('Opening WalletConnect modal...');
+    
+    if (!modal) {
+      console.error('Web3Modal not initialized!');
+      return;
+    }
 
-// 5. Create a Web3Modal instance
-const modal = createWeb3Modal({
-	ethersConfig,
-	chains: [mainnet],
-	projectId,
-	enableAnalytics: true, // Optional - defaults to your Cloud configuration
-	enableOnramp: true, // Optional - false as default
+    // Open Web3Modal
+    await modal.open();
+
+    console.log('Web3Modal opened! Waiting for provider...');
+
+    // Fetch the correct Web3Modal provider (DO NOT use window.ethereum directly)
+    const web3Provider = await modal.getWalletProvider();
+    
+    if (!web3Provider) {
+      console.error('Web3Modal provider not found.');
+      return;
+    }
+
+    const provider = new ethers.BrowserProvider(web3Provider);
+    const signer = await provider.getSigner();
+    walletAddress.value = await signer.getAddress();
+	connected.value = true;
+    
+    console.log('Connected wallet:', walletAddress.value);
+  } catch (error) {
+    console.error('Wallet connection failed:', error);
+  }
+};
+
+// Initialize Web3Modal in onMounted()
+onMounted(() => {
+  console.log('Initializing Web3Modal...');
+
+  const ethersConfig = defaultConfig({
+    metadata,
+    enableEIP6963: true,
+    enableInjected: true,
+    enableCoinbase: true,
+    rpcUrl: 'https://56.rpc.thirdweb.com/66c5a792422842671ed5c3047791f5b8',
+    defaultChainId: 56,
+  });
+
+  modal = createWeb3Modal({
+    ethersConfig,
+    chains: [mainnet],
+    projectId,
+    enableAnalytics: true,
+    enableOnramp: true,
+  });
+
+  console.log('Web3Modal initialized:', modal);
+
+  // **Detect when the wallet is connected**
+  modal.subscribeState(async (state) => {
+    console.log('Web3Modal state changed:', state);
+
+    if (state.connected) {
+      const web3Provider = await modal.getWalletProvider();
+      if (!web3Provider) {
+        console.error('Web3Modal provider not found.');
+        return;
+      }
+
+      const provider = new ethers.BrowserProvider(web3Provider);
+      const signer = await provider.getSigner();
+      walletAddress.value = await signer.getAddress();
+      console.log('Wallet connected:', walletAddress.value);
+    }
+  });
+
+  // **Detect account changes**
+  if (window.ethereum) {
+    window.ethereum.on('accountsChanged', async (accounts) => {
+      walletAddress.value = accounts.length > 0 ? accounts[0] : null;
+      console.log('Account changed:', walletAddress.value);
+    });
+  }
 });
 </script>
 
 <template>
-	<button @click="modal.open()">Connect Wallet</button>
-	<!-- <button @click="modal.open({ view: 'Networks' })">Open Network Modal</button> -->
+  <div class="container">
+    <!-- Wallet Address Display -->
+    <div v-if="walletAddress" class="wallet-info">
+      Connected: {{ walletAddress.slice(0, 6) }}...{{ walletAddress.slice(-4) }}
+    </div>
+
+    <!-- Connect Wallet Button -->
+	<button @click="connectWallet">
+	  {{ connected ? 'Wallet Connected' : 'Connect Wallet' }}
+	</button>
+  </div>
 </template>
+
+<style>
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+}
+
+.wallet-info {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  background: #282c34;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+}
+</style>
