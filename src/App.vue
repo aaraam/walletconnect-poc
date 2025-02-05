@@ -212,7 +212,7 @@ onMounted(async () => {
 
 		<div v-if="stakeSuccess" class="dialog-box">
 			<p>Transaction confirmed!</p>
-			<a :href="`https://sepolia.etherscan.com/tx/${stakeTxHash}`" target="_blank">
+			<a :href="`https://sepolia.etherscan.io/tx/${stakeTxHash}`" target="_blank">
 				View on EtherScan
 			</a>
 			<button @click="closeDialog">Close</button>
