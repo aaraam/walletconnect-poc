@@ -8,13 +8,13 @@ let connected = ref(false);
 // WalletConnect Project ID
 const projectId = '59b8f4b8f8153ff97e652204f24f0442';
 
-// Binance Smart Chain Configuration
+// Sepolia Configuration
 const mainnet = {
-	chainId: 97,
-	name: 'Binance Smart Chain Testnet',
-	currency: 'BNB',
-	explorerUrl: 'https://testnet.bscscan.com',
-	rpcUrl: 'https://bsc-testnet-dataseed.bnbchain.org',
+	chainId: 11155111,
+	name: 'Sepolia Ethereum', 
+	currency: 'ETH',
+	explorerUrl: 'https://sepolia.etherscan.io',
+	rpcUrl: 'https://sepolia.infura.io/v3/03582ef70ea3438dbfb0194f16fe17c2',
 };
 
 // Application Metadata
@@ -82,7 +82,7 @@ const stakeTokens = async () => {
 		const signer = await provider.getSigner();
 
 		// Contract details
-		const contractAddress = '0x412b2e9E6c30486c537333Be85e09f767c367B6E';
+		const contractAddress = '0xBc4A769F0F0FE0C1016D3247BEC44e98eE5759fb';
 		// Minimal ABI: the stake() function and the event (if needed)
 		const abi = ['function stake() public', 'event Staked(address staker)'];
 
@@ -124,8 +124,8 @@ onMounted(async () => {
 		enableEIP6963: true,
 		enableInjected: true,
 		enableCoinbase: true,
-		rpcUrl: 'https://bsc-testnet-dataseed.bnbchain.org',
-		defaultChainId: 97,
+		rpcUrl: 'https://mainnet.infura.io/v3/03582ef70ea3438dbfb0194f16fe17c2',
+		defaultChainId: 11155111,
 	});
 
 	modal = createWeb3Modal({
@@ -212,8 +212,8 @@ onMounted(async () => {
 
 		<div v-if="stakeSuccess" class="dialog-box">
 			<p>Transaction confirmed!</p>
-			<a :href="`https://testnet.bscscan.com/tx/${stakeTxHash}`" target="_blank">
-				View on BscScan
+			<a :href="`https://sepolia.etherscan.com/tx/${stakeTxHash}`" target="_blank">
+				View on EtherScan
 			</a>
 			<button @click="closeDialog">Close</button>
 		</div>
