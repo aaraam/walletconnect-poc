@@ -67,12 +67,11 @@ const connectWallet = async () => {
 	}
 };
 
-// Function to interact with the contract's stake() function
 const stakeTokens = async () => {
 	try {
 		console.log('Attempting to stake tokens...');
 
-		// Get the provider and signer from the modal
+		// Get Web3 provider from Web3Modal
 		const web3Provider = await modal.getWalletProvider();
 		if (!web3Provider) {
 			console.error('Web3Modal provider not found.');
@@ -80,34 +79,36 @@ const stakeTokens = async () => {
 		}
 		const provider = new ethers.BrowserProvider(web3Provider);
 		const signer = await provider.getSigner();
+		const fromAddress = await signer.getAddress();
 
 		// Contract details
 		const contractAddress = '0xBc4A769F0F0FE0C1016D3247BEC44e98eE5759fb';
-		// Minimal ABI: the stake() function and the event (if needed)
-		const abi = ['function stake() public', 'event Staked(address staker)'];
-
-		// Instantiate the contract
+		const abi = ['function stake() public'];
 		const contract = new ethers.Contract(contractAddress, abi, signer);
 
-		// Call the stake function
-		const tx = await contract.stake();
-		console.log('Staking transaction submitted:', tx.hash);
+		// Encode the transaction
+		const txData = contract.interface.encodeFunctionData('stake', []);
 
-		// Optionally wait for confirmation
-		const receipt = await tx.wait();
-		console.log('Staking transaction confirmed.');
+		// Prepare the transaction request for WalletKit
+		const transactionRequest = {
+			from: fromAddress,
+			to: contractAddress,
+			data: txData,
+			value: '0x0', // Assuming no ETH is required
+		};
 
-		console.log('Receipt:', receipt);
-		
+		// Request WalletKit to sign and send the transaction
+		const result = await web3Provider.request({
+			method: 'eth_sendTransaction',
+			params: [transactionRequest],
+		});
 
-		// Show the success dialog with tx hash
-		stakeSuccess.value = true;
-		stakeTxHash.value = receipt.hash;
-		
+		console.log('Transaction sent via WalletKit:', result);
 	} catch (error) {
 		console.error('Error staking tokens:', error);
 	}
 };
+
 
 // Function to close the success dialog
 const closeDialog = () => {
@@ -124,7 +125,7 @@ onMounted(async () => {
 		enableEIP6963: true,
 		enableInjected: true,
 		enableCoinbase: true,
-		rpcUrl: 'https://mainnet.infura.io/v3/03582ef70ea3438dbfb0194f16fe17c2',
+		rpcUrl: 'https://sepolia.infura.io/v3/03582ef70ea3438dbfb0194f16fe17c2',
 		defaultChainId: 11155111,
 	});
 
